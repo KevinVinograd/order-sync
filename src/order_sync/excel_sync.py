@@ -197,6 +197,8 @@ def _format_report_sheet(ws: Worksheet, columns: List[str]) -> None:
 		"ETD (fecha)",
 		"ETA (fecha)",
 		"Fecha de ISF",
+		"Fecha de customs clearance",
+		"Fecha de empty return",
 	])
 	# Hide technical columns
 	_hide_columns(ws, ["orderId", "__createdAt", "__lastUpdateAt"])

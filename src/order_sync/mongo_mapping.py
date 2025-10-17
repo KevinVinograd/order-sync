@@ -17,6 +17,10 @@ REPORT_COLUMNS_VISIBLE = [
 	"Final destination",
 	"ISF",
 	"Fecha de ISF",
+	"Customs clearance",
+	"Fecha de customs clearance",
+	"Empty return",
+	"Fecha de empty return",
 ]
 
 TECH_COLUMNS = [
@@ -40,17 +44,22 @@ def extract_first_stopover_name(doc: Dict[str, Any]) -> Optional[str]:
 def map_doc_to_report_row(doc: Dict[str, Any]) -> Dict[str, Any]:
 	ref = doc.get("number")
 	etd = format_date_ymd(doc.get("dateETD"))
-	confirmed_etd = yes_no(doc.get("isBookingConfirmed"))
+	confirmed_etd = yes_no(doc.get("isMANE"))  # ETD confirmado
 	eta = format_date_ymd(doc.get("dateETA"))
-	confirmed_eta = yes_no(doc.get("isConfirmBLReceived"))
+	confirmed_eta = yes_no(doc.get("isMANI"))  # ETA confirmado
 	booking = doc.get("bookingNumber")
-	mbl = doc.get("bookingNumber")  # si hay un campo MBL distinto, cambiar aquí
+	mbl = doc.get("bookingNumber")
 	pol = doc.get("origin")
 	ts = extract_first_stopover_name(doc)
 	pod = doc.get("destination")
 	final_destination = doc.get("destination")
 	isf = yes_no(doc.get("isISF"))
 	fecha_isf = format_date_ymd(doc.get("dateISF"))
+	# Defaults for now
+	customs_clearance = "NO"
+	fecha_customs_clearance = None
+	empty_return = "NO"
+	fecha_empty_return = None
 
 	order_id = str(doc.get("_id")) if doc.get("_id") is not None else None
 	created_at = format_date_ymd(doc.get("createdAt"))
@@ -70,6 +79,10 @@ def map_doc_to_report_row(doc: Dict[str, Any]) -> Dict[str, Any]:
 		"Final destination": final_destination,
 		"ISF": isf,
 		"Fecha de ISF": fecha_isf,
+		"Customs clearance": customs_clearance,
+		"Fecha de customs clearance": fecha_customs_clearance,
+		"Empty return": empty_return,
+		"Fecha de empty return": fecha_empty_return,
 		"orderId": order_id,
 		"__createdAt": created_at,
 		"__lastUpdateAt": last_update_at,
