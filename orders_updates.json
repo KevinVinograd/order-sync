@@ -1,0 +1,1 @@
+[{"userId": "u-123", "orderId": "A-1001", "date": "2025-10-15T09:30:00", "status": "SHIPPED", "total": 120.75, "updatedAt": "2025-10-15T11:24:14.043432", "note": "updated status and total"}, {"userId": "u-456", "orderId": "B-2002", "date": "2025-10-15T10:00:00", "status": "CANCELLED", "total": 0, "updatedAt": "2025-10-15T11:24:14.043437", "cancelReason": "customer request"}]

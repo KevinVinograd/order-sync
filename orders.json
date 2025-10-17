@@ -1,0 +1,1 @@
+[{"userId": "u-123", "orderId": "A-1001", "date": "2025-10-15T11:05:30.535426", "status": "NEW", "total": 100.5, "updatedAt": "2025-10-15T11:05:30.535430", "items": [{"sku": "X", "qty": 1, "price": 100.5}]}, {"userId": "u-456", "orderId": "B-2002", "date": "2025-10-15T11:05:30.535431", "status": "PROCESSING", "total": 250.0, "updatedAt": "2025-10-15T11:05:30.535432"}]

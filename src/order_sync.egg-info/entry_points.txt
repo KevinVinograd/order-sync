@@ -1,0 +1,2 @@
+[console_scripts]
+order-sync = order_sync.cli:main

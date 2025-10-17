@@ -1,0 +1,18 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual env
+.venv/
+
+# VSCode/IDE
+.vscode/
+.idea/
+
+# Mac
+.DS_Store
+
+# Local output/logs (we only use Drive)
+order_sync_output/*.xlsx
+order_sync_output/*.log
