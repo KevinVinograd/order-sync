@@ -17,6 +17,9 @@ class Config:
 	drive_folder_id: Optional[str]
 	# Accounts list to track
 	account_ids: List[str]
+	# Filtering config
+	ref_prefixes: List[str]
+	account_ids_no_prefix: List[str]
 
 
 DEFAULT_OUTPUT_DIR = "./order_sync_output"
@@ -32,9 +35,18 @@ def load_env_file(env_file: Optional[str]) -> None:
 			load_dotenv(dotenv_path=str(cwd_env), override=False)
 
 
+def _split_csv(name: str) -> List[str]:
+	val = os.getenv(name, "")
+	if not val:
+		return []
+	return [s.strip() for s in val.split(",") if s.strip()]
+
+
 def get_config() -> Config:
 	account_ids_raw = os.getenv("ACCOUNT_IDS", "").strip()
 	account_ids = [s.strip() for s in account_ids_raw.split(",") if s.strip()]
+	prefixes = _split_csv("ACCOUNT_REF_PREFIXES")  # e.g., VARE,VARI
+	no_prefix_ids = _split_csv("ACCOUNT_IDS_NO_PREFIX")  # accounts without ref filtering
 	return Config(
 		mongo_uri=os.getenv("MONGO_URI"),
 		output_dir=os.getenv("OUTPUT_DIR", DEFAULT_OUTPUT_DIR),
@@ -43,4 +55,6 @@ def get_config() -> Config:
 		drive_private_key=os.getenv("GOOGLE_PRIVATE_KEY"),
 		drive_folder_id=os.getenv("GOOGLE_DRIVE_FOLDER_ID"),
 		account_ids=account_ids,
+		ref_prefixes=prefixes,
+		account_ids_no_prefix=no_prefix_ids,
 	)

@@ -83,7 +83,9 @@ def cmd_mongo_auto(args: argparse.Namespace) -> int:
 				# fetch changes and upsert against tmp workbook
 				docs = fetch_orders_by_ids(cfg.mongo_uri, order_ids)
 				changed_rows = [map_doc_to_report_row(d) for d in docs]
-				changed_rows = [r for r in changed_rows if isinstance(r.get("REF"), str) and r.get("REF", "").startswith("VARE")]
+				# Conditional prefix filtering
+				if acc_id not in cfg.account_ids_no_prefix and cfg.ref_prefixes:
+					changed_rows = [r for r in changed_rows if isinstance(r.get("REF"), str) and any(r.get("REF", "").startswith(p) for p in cfg.ref_prefixes)]
 				wb_path, created_ids, updated_ids = upsert_report_for_user_with_stats(filename_id, changed_rows, REPORT_COLUMNS, Path(tmpdir))
 				write_last_sync(wb_path, utc_now)
 				msg = f"[{utc_now.isoformat()}] Incremental for {filename_id}: created={len(created_ids)}, updated={len(updated_ids)}"
@@ -103,7 +105,8 @@ def cmd_mongo_auto(args: argparse.Namespace) -> int:
 				# full generation into temp and upload
 				all_docs = fetch_orders_by_account(cfg.mongo_uri, acc_id)
 				all_rows = [map_doc_to_report_row(d) for d in all_docs]
-				all_rows = [r for r in all_rows if isinstance(r.get("REF"), str) and r.get("REF", "").startswith("VARE")]
+				if acc_id not in cfg.account_ids_no_prefix and cfg.ref_prefixes:
+					all_rows = [r for r in all_rows if isinstance(r.get("REF"), str) and any(r.get("REF", "").startswith(p) for p in cfg.ref_prefixes)]
 				wb_path = write_report_for_user(filename_id, all_rows, REPORT_COLUMNS, Path(tmpdir))
 				write_last_sync(wb_path, utc_now)
 				msg = f"[{utc_now.isoformat()}] Full generated for {filename_id}: created={len(all_rows)}, updated=0"
