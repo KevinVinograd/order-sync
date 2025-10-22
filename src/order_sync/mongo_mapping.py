@@ -15,6 +15,7 @@ REPORT_COLUMNS_VISIBLE = [
 	"T/S",
 	"POD",
 	"Final destination",
+	"Internal client number",
 	"ISF",
 	"Fecha de ISF",
 	"Customs clearance",
@@ -53,6 +54,7 @@ def map_doc_to_report_row(doc: Dict[str, Any]) -> Dict[str, Any]:
 	ts = extract_first_stopover_name(doc)
 	pod = doc.get("destination")
 	final_destination = doc.get("destination")
+	internal_client_number = doc.get("internalClientNumber")
 	isf = yes_no(doc.get("isISF"))
 	fecha_isf = format_date_ymd(doc.get("dateISF"))
 	# Defaults for now
@@ -77,6 +79,7 @@ def map_doc_to_report_row(doc: Dict[str, Any]) -> Dict[str, Any]:
 		"T/S": ts,
 		"POD": pod,
 		"Final destination": final_destination,
+		"Internal client number": internal_client_number,
 		"ISF": isf,
 		"Fecha de ISF": fecha_isf,
 		"Customs clearance": customs_clearance,
