@@ -5,6 +5,8 @@ from typing import Dict, List
 from datetime import datetime, timezone
 import tempfile
 
+from openpyxl import load_workbook
+
 from .excel_sync import write_report_for_user, read_last_sync, write_last_sync, upsert_report_for_user_with_stats
 from .config import load_env_file, get_config
 from .drive import build_drive_client, upload_or_update_file, find_file_id_by_name, download_file
@@ -62,17 +64,36 @@ def cmd_mongo_auto(args: argparse.Namespace) -> int:
 		acc_name = fetch_account_name(cfg.mongo_uri, acc_id)
 		filename_id = acc_name if acc_name else acc_id
 		remote_name = f"{filename_id}.xlsx"
-		# Use Drive as source of truth: check if file exists in Drive
 		file_id = find_file_id_by_name(drive_client, cfg.drive_folder_id, remote_name)
 		with tempfile.TemporaryDirectory() as tmpdir:
 			tmp_path = Path(tmpdir) / remote_name
 			if file_id:
-				# download current workbook for meta/merge
+				# download and decide full vs incremental based on 'report' sheet presence
 				try:
 					download_file(drive_client, file_id, tmp_path)
 				except Exception:
 					pass
-				# incremental path if we have a file
+				has_report = False
+				try:
+					wb = load_workbook(filename=str(tmp_path))
+					has_report = ("report" in wb.sheetnames)
+				except Exception:
+					has_report = False
+				if not has_report:
+					# full rebuild if report sheet is missing
+					all_docs = fetch_orders_by_account(cfg.mongo_uri, acc_id)
+					all_rows = [map_doc_to_report_row(d) for d in all_docs]
+					if acc_id not in cfg.account_ids_no_prefix and cfg.ref_prefixes:
+						all_rows = [r for r in all_rows if isinstance(r.get("REF"), str) and any(r.get("REF", "").startswith(p) for p in cfg.ref_prefixes)]
+					wb_path = write_report_for_user(filename_id, all_rows, REPORT_COLUMNS, Path(tmpdir))
+					write_last_sync(wb_path, utc_now)
+					msg = f"[{utc_now.isoformat()}] Full generated for {filename_id}: created={len(all_rows)}, updated=0"
+					print(msg)
+					_append_log(output_dir, msg)
+					_, action = upload_or_update_file(drive_client, wb_path, cfg.drive_folder_id)
+					print(f"Drive {action}: {remote_name}")
+					continue
+				# incremental flow
 				last_sync = read_last_sync(tmp_path) or (utc_now.replace(year=utc_now.year - 1))
 				order_ids = fetch_updated_order_ids_since(cfg.mongo_uri, acc_id, since=last_sync)
 				if not order_ids:
@@ -80,10 +101,8 @@ def cmd_mongo_auto(args: argparse.Namespace) -> int:
 					print(msg)
 					_append_log(output_dir, msg)
 					continue
-				# fetch changes and upsert against tmp workbook
 				docs = fetch_orders_by_ids(cfg.mongo_uri, order_ids)
 				changed_rows = [map_doc_to_report_row(d) for d in docs]
-				# Conditional prefix filtering
 				if acc_id not in cfg.account_ids_no_prefix and cfg.ref_prefixes:
 					changed_rows = [r for r in changed_rows if isinstance(r.get("REF"), str) and any(r.get("REF", "").startswith(p) for p in cfg.ref_prefixes)]
 				wb_path, created_ids, updated_ids = upsert_report_for_user_with_stats(filename_id, changed_rows, REPORT_COLUMNS, Path(tmpdir))
@@ -91,18 +110,15 @@ def cmd_mongo_auto(args: argparse.Namespace) -> int:
 				msg = f"[{utc_now.isoformat()}] Incremental for {filename_id}: created={len(created_ids)}, updated={len(updated_ids)}"
 				print(msg)
 				_append_log(output_dir, msg)
-				# Always record a brief diff of updated fields (limited)
 				if updated_ids:
 					changes = fetch_recent_field_changes(cfg.mongo_uri, acc_id, since=last_sync, order_ids=updated_ids[:50])
 					for oid, entries in changes:
-						# we don't have REF here without extra fetch; rely on later upload labels
 						for e in entries:
 							_append_log(output_dir, f"  ~ {oid} {e.get('action')} @ {e.get('date')}: " + ", ".join([f"{c.get('field')}: {c.get('old')} -> {c.get('new')}" for c in e.get('changes', [])]))
-				# upload updated workbook to Drive
 				_, action = upload_or_update_file(drive_client, wb_path, cfg.drive_folder_id)
 				print(f"Drive {action}: {remote_name}")
 			else:
-				# full generation into temp and upload
+				# no file in Drive → full
 				all_docs = fetch_orders_by_account(cfg.mongo_uri, acc_id)
 				all_rows = [map_doc_to_report_row(d) for d in all_docs]
 				if acc_id not in cfg.account_ids_no_prefix and cfg.ref_prefixes:
